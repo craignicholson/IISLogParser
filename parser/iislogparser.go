@@ -6,10 +6,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -37,19 +39,77 @@ type Log struct {
 	Filename      string    // The file which contained the logs.
 }
 
+func loadLog(data []string, customerName string, filename string) Log {
+	// I should also return error here too right? And test on failure
+
+	// convert strings to other types
+	// LoadLocation uses http://golang.org/pkg/time/#LoadLocation.
+	// icann names - get alist of these... we can use... for documentation
+	// https://www.iana.org/time-zones
+	location, err4 := time.LoadLocation("UTC")
+	if err4 != nil {
+		fmt.Printf("LoadLocation : %s", err4)
+	}
+
+	//https://www.iana.org/time-zones
+	const shortFormlayout = "2006-01-02"
+	iDate, err1 := time.ParseInLocation(shortFormlayout, data[0], location)
+
+	if err1 != nil {
+		log.Fatal(err1)
+	}
+
+	iscStatus, err2 := strconv.Atoi(data[11])
+	iscSubstatus, err3 := strconv.Atoi(data[12])
+	iscWin32Status, err4 := strconv.Atoi(data[13])
+	itimeTaken, err5 := strconv.Atoi(data[14])
+
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+	if err3 != nil {
+		log.Fatal(err3)
+	}
+	if err4 != nil {
+		log.Fatal(err4)
+	}
+	if err5 != nil {
+		log.Fatal(err5)
+	}
+	// create a Log record
+	row := Log{Date: iDate,
+		Time:          data[1],
+		SIP:           data[2],
+		CsMethod:      data[3],
+		CsURIStem:     data[4],
+		CsURIQuery:    data[5],
+		SPort:         data[6],
+		CsUsername:    data[7],
+		CIP:           data[8],
+		CsUserAgent:   data[9],
+		CsReferer:     data[10],
+		ScStatus:      iscStatus,
+		ScSubstatus:   iscSubstatus,
+		ScWin32Status: iscWin32Status,
+		TimeTaken:     itimeTaken,
+		Customer:      customerName,
+		Filename:      filename,
+	}
+	return row
+}
+
 func main() {
+	// TODO: directory needs to be read from a .config file
 	files, err := ioutil.ReadDir("../sample")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Remove files we have already imported ...
-	// load a list of files from somewhere ...
-	processed, errRL := readLines("History.dat")
+	// Load the history
+	processed, errRL := loadHistory("History.dat")
 	if errRL != nil {
 		log.Fatal(errRL)
 	}
-	fmt.Println(len(processed))
 
 	for _, file := range files {
 		var logs []Log
@@ -73,60 +133,7 @@ func main() {
 					// be a line in the log file.  Don't send the comments to home base.
 					if (strings.Contains(line, "#")) == false {
 						data := strings.Fields(line)
-
-						// convert strings to other types
-						// LoadLocation uses http://golang.org/pkg/time/#LoadLocation.
-						// icann names - get alist of these... we can use... for documentation
-						// https://www.iana.org/time-zones
-						location, err4 := time.LoadLocation("UTC")
-						if err4 != nil {
-							fmt.Printf("LoadLocation : %s", err4)
-						}
-
-						//https://www.iana.org/time-zones
-						const shortFormlayout = "2006-01-02"
-						iDate, err1 := time.ParseInLocation(shortFormlayout, data[0], location)
-
-						if err1 != nil {
-							log.Fatal(err1)
-						}
-
-						iscStatus, err2 := strconv.Atoi(data[11])
-						iscSubstatus, err3 := strconv.Atoi(data[12])
-						iscWin32Status, err4 := strconv.Atoi(data[13])
-						itimeTaken, err5 := strconv.Atoi(data[14])
-
-						if err2 != nil {
-							log.Fatal(err2)
-						}
-						if err3 != nil {
-							log.Fatal(err3)
-						}
-						if err4 != nil {
-							log.Fatal(err4)
-						}
-						if err5 != nil {
-							log.Fatal(err5)
-						}
-						// create a Log record
-						row := Log{Date: iDate,
-							Time:          data[1],
-							SIP:           data[2],
-							CsMethod:      data[3],
-							CsURIStem:     data[4],
-							CsURIQuery:    data[5],
-							SPort:         data[6],
-							CsUsername:    data[7],
-							CIP:           data[8],
-							CsUserAgent:   data[9],
-							CsReferer:     data[10],
-							ScStatus:      iscStatus,
-							ScSubstatus:   iscSubstatus,
-							ScWin32Status: iscWin32Status,
-							TimeTaken:     itimeTaken,
-							Customer:      "CUSTOMER_NAME",
-							Filename:      fileName,
-						}
+						row := loadLog(data, "CUSTOMER_NAME", fileName)
 
 						// Add the log record (row) to the logs slice
 						logs = append(logs, row)
@@ -139,28 +146,46 @@ func main() {
 				}
 
 				// Send data as tightly packed binary form via web service to cloud
-				printJSON(logs[:1])
+				//printJSON(logs[:1])
+				result := publishData("http://localhost:8080", logs)
 
-				// Log that we loaded the file successfully in some type of file or database
-				// Need to make sure we never reach this line of code if something errors out
-				// before the endpoint successfully loads the data to the database.
-				appendStringToFile("History.dat", fileName)
+				if result == "200 OK" {
+					// Log the file loaded successfully
+					// Make sure we never reach this line of code if an error occurs, or
+					// before the endpoint successfully loads the data to the database.
+					fmt.Printf("Successful Load of %v : %v\n", fileName, result)
+					// Note the append could fail also, and if it does we would re-load the file
+					// again so we need a dedupe process on in moya.
+					appendStringToFile("History.dat", fileName)
+				}
 			}
-
 		} else {
 			log.Fatal(err)
 		}
 	}
 }
 
-// readLines reads a whole file into memory
-// and returns a slice of its lines.
-func readLines(path string) (map[string]bool, error) {
+// publishData v0.1 to pump data to raw endpoint w/ no security....
+func publishData(endpoint string, logs []Log) string {
+	// gob encoding
+	var data = dataOutAsByte(logs)
+
+	resp, err := http.Post(endpoint, "application/json", bytes.NewBuffer(data))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return resp.Status
+}
+
+// loadHistory loads the files we have logged from previous
+// successul processing and returns a map we can search
+// to test if we have already processed the file.
+func loadHistory(path string) (map[string]bool, error) {
 	files := make(map[string]bool) // create the map
 
-	// Open or create the new file...
-	// 0666 sets the file permissions to what?
-	file, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0666) //os.Open(path)
+	// Open or create the new file in read only mode.
+	// 0666 - chmod 666 means that all users can read and write but cannot execute
+	file, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +195,8 @@ func readLines(path string) (map[string]bool, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		// we are setting the value to true, meaning we have already processed this file
+		// Setting the value to true,
+		// since we have already processed this file
 		files[line] = true
 	}
 	return files, scanner.Err()
@@ -180,7 +206,7 @@ func readLines(path string) (map[string]bool, error) {
 func appendStringToFile(path, text string) error {
 	// Open or create the file, if this is the first record
 	// 0600 sets the file permisions to -rw-r--r--
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		panic(err)
 	}
@@ -193,13 +219,12 @@ func appendStringToFile(path, text string) error {
 	return nil
 }
 
-// for testing...
-func printJSON(l []Log) {
+func dataOutAsByte(l []Log) []byte {
 	json, err := json.Marshal(l)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return nil
 	}
 	// Print the Results
-	fmt.Println(string(json))
+	return json
 }
