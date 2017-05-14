@@ -127,6 +127,37 @@ Types of data streams
 ## Web UI - Aurora
 The Aurora Application most effective means of gaining information from unwiling data.
 
+# Database Options
+
+AWS Dynamo Db (nosql)
+
+Download local version for development and testing
+https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.html
+
+Create a directory for dynamoDB, cd into the directory, download the db, extract the db, run the database
+cn $ cd 
+cn $ mkdir dynamoDB
+cn $ cd dynamoDB
+cn dynamoDB $ wget https://s3-us-west-2.amazonaws.com/dynamodb-local/dynamodb_local_latest.tar.gz
+cn dynamoDB $ tar xopf dynamodb_local_latest.tar.gz 
+
+
+--testing this one...
+cn dynamoDB $ aws dynamodb list-tables --endpoint-url http://localhost:9090 
+
+-port
+
+
+cn dynamoDB $ java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb
+Initializing DynamoDB Local with the following configuration:
+Port:	8000
+InMemory:	false
+DbPath:	null
+SharedDb:	true
+shouldDelayTransientStatuses:	false
+CorsParams:	*
+
+
 ## Database Schema(s)
 
 We need to be multi-tenat and have counts by Customer and 
