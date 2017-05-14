@@ -2,5 +2,6 @@
   "ApiKey": "e2900fc5d1bddb91",
   "Uri" : "http://api.wunderground.com/api/",
   "IsPublish" : true,
-  "PublishToEndPoint" : "http://localhost:8080/"
+  "PublishToEndPoint" : "http://localhost:8080/",
+  "CustomerName" : "LuLuMon"
 }

@@ -18,23 +18,23 @@ import (
 
 // Log holds the default fields from an simple IIS Setup
 type Log struct {
-	Date          time.Time //
-	Time          string    //
-	SIP           string    //
-	CsMethod      string    //
-	CsURIStem     string    //
-	CsURIQuery    string    //
-	SPort         string    //
-	CsUsername    string    //
-	CIP           string    //
-	CsUserAgent   string    //
-	CsReferer     string    //
-	ScStatus      int       //
-	ScSubstatus   int       //
-	ScWin32Status int       //
-	TimeTaken     int       //
-	Customer      string    //
-	Filename      string    //
+	Date          time.Time // The date on which the activity occurred.
+	Time          string    // The time, in coordinated universal time (UTC), at which the activity occurred.
+	SIP           string    // The IP address of the server on which the log file entry was generated.
+	CsMethod      string    // The requested verb, for example, a GET method.
+	CsURIStem     string    // The target of the verb, for example, Default.htm.
+	CsURIQuery    string    // The query, if any, that the client was trying to perform. A Universal Resource Identifier (URI) query is necessary only for dynamic pages.
+	SPort         string    // The server port number that is configured for the service.
+	CsUsername    string    // The name of the authenticated user that accessed the server. Anonymous users are indicated by a hyphen.
+	CIP           string    // The IP address of the client that made the request.
+	CsUserAgent   string    // The browser type that the client used.
+	CsReferer     string    // The site that the user last visited. This site provided a link to the current site.
+	ScStatus      int       // The HTTP status code.
+	ScSubstatus   int       // The substatus error code.
+	ScWin32Status int       // The Windows status code.
+	TimeTaken     int       // The length of time that the action took, in milliseconds.
+	Customer      string    // The unique customers name for grouping and viewing.
+	Filename      string    // The file which contained the logs.
 }
 
 func main() {
@@ -45,12 +45,6 @@ func main() {
 
 	// Remove files we have already imported ...
 	// load a list of files from somewhere ...
-	// processed := map[string]bool{
-	// 	"u_ex151104.log": true,
-	// 	"u_ex170511.log": true,
-	// }
-
-	//Fails is History.dat is missing
 	processed, errRL := readLines("History.dat")
 	if errRL != nil {
 		log.Fatal(errRL)
@@ -64,8 +58,11 @@ func main() {
 		filepath := "../sample/" + fileName
 		if file, err := os.Open(filepath); err == nil {
 
+			// make sure file gets closed
+			defer file.Close()
+
+			// Only parse files which have not been parsed.
 			if !processed[fileName] {
-				fmt.Println("NEW FILE.")
 				// create a new scanner and read the file line by line
 				// I think scanner does have some type of limit on the lennth...
 				scanner := bufio.NewScanner(file)
@@ -145,12 +142,10 @@ func main() {
 				printJSON(logs[:1])
 
 				// Log that we loaded the file successfully in some type of file or database
+				// Need to make sure we never reach this line of code if something errors out
+				// before the endpoint successfully loads the data to the database.
 				appendStringToFile("History.dat", fileName)
-
 			}
-
-			// make sure it gets closed
-			defer file.Close()
 
 		} else {
 			log.Fatal(err)
@@ -161,18 +156,22 @@ func main() {
 // readLines reads a whole file into memory
 // and returns a slice of its lines.
 func readLines(path string) (map[string]bool, error) {
-	files := make(map[string]bool)
-	file, err := os.Open(path)
+	files := make(map[string]bool) // create the map
+
+	// Open or create the new file...
+	// 0666 sets the file permissions to what?
+	file, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0666) //os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
+	// create a scanner so we can create a map of each filename in this fil
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
+		// we are setting the value to true, meaning we have already processed this file
 		files[line] = true
-		//files[line] = append(files[line], true)
 	}
 	return files, scanner.Err()
 }
@@ -185,7 +184,6 @@ func appendStringToFile(path, text string) error {
 	if err != nil {
 		panic(err)
 	}
-
 	defer f.Close()
 
 	// Write the string, and add in carrige return so we can read these back in as a map
