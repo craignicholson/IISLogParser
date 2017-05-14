@@ -1,26 +1,34 @@
-# IISLogParser
+# IISLogParser Project
+Exercise in go to parse IIS logs, send to central server, and display the results 
+in a web application.
 
-Exercise in go to parse IIS logs
+## Parser Name - DRD
 
-## Configuration file
+### Steps
+- Runs once or more times a day
+- Parses out data in new files, skips the files it has parsed
+- Puts data into an object
+- Posts or sends data to central server
+
+### Configuration file
 
     * Directory of files
     * Customer Name
     * Server Name
     * Server IP
     
-## History File
+### History File
 Since files follow a number pattern we will just save the last file we
 imported
 
-## Steps
+### Steps
 
     1. Define Schemas
     2. Import File
     3. Write summary data to .json file
 
 
-## IIS Fields (Default)
+### IIS Fields (Default)
 https://stackoverflow.com/questions/11296698/understanding-iis-7-log-files
 https://msdn.microsoft.com/en-us/library/windows/desktop/aa814385(v=vs.85).aspx
 
@@ -47,14 +55,14 @@ Notes:
 "::1" == 127.0.0.1
 "-"  == Anonymous users are indicated by a hyphen.
 
+#### Test 1
 
+```bash
 
-
-
-
-
-### Test 1
 2015-11-04 22:22:31 ::1 POST /Home/ApplicationCategory_ByCategoryId - 80 - ::1 Mozilla/5.0+(Windows+NT+6.3;+WOW64;+Trident/7.0;+rv:11.0)+like+Gecko http://localhost/ 200 0 0 46
+
+```
+
 
 ```json
 
@@ -78,8 +86,15 @@ Notes:
 
 ```
 
-### Test 2
+#### Test 2
+
+```bash
+
 2015-11-04 22:04:49 ::1 GET /MDMVEE/JobAnalysis.aspx - 80 ARUBA\mdmadmin ::1 Mozilla/5.0+(Windows+NT+6.3;+WOW64;+Trident/7.0;+rv:11.0)+like+Gecko http://localhost/ 200 0 0 234
+
+```
+
+```json
 
 {
     "date" : "2015-11-04", 
@@ -100,13 +115,20 @@ Notes:
 }
 
 ```
-## TODO
 
-    * go web app to display the results
-    * all customers in one app
-    * AWS or GCP?
+## Server - Moya
+Server accpets connections from authenticated DRD client which listens
+for incoming data.
 
-## Schemas
+Types of data streams
+- logs
+- licencse checks or validations
+
+## Web UI - Aurora
+The Aurora Application most effective means of gaining information from unwiling data.
+
+## Database Schema(s)
+
 We need to be multi-tenat and have counts by Customer and 
 total counts across all instances.
 
@@ -128,3 +150,8 @@ total counts across all instances.
         * Month
         * Count
 
+# TODO
+
+    * go web app to display the results
+    * all customers in one app
+    * AWS or GCP?
