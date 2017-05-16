@@ -18,7 +18,15 @@ import (
 	"time"
 )
 
-// Log holds the default fields from an simple IIS Setup
+// Header contains the summary information about the logs
+type Header struct {
+	Logs         []Log  // The logs from IIS
+	CustomerName string // The unique customers name for grouping and viewing.
+	Filename     string // The file which contained the logs.
+	Records      int    // The number of rows in the log file we just parsed.
+}
+
+// Log contains the default fields from an simple IIS Setup
 type Log struct {
 	Date          time.Time // The date on which the activity occurred.
 	Time          string    // The time, in coordinated universal time (UTC), at which the activity occurred.
@@ -35,11 +43,9 @@ type Log struct {
 	ScSubstatus   int       // The substatus error code.
 	ScWin32Status int       // The Windows status code.
 	TimeTaken     int       // The length of time that the action took, in milliseconds.
-	Customer      string    // The unique customers name for grouping and viewing.
-	Filename      string    // The file which contained the logs.
 }
 
-func loadLog(data []string, customerName string, filename string) Log {
+func loadLog(data []string) Log {
 	// I should also return error here too right? And test on failure
 
 	// convert strings to other types
@@ -92,8 +98,6 @@ func loadLog(data []string, customerName string, filename string) Log {
 		ScSubstatus:   iscSubstatus,
 		ScWin32Status: iscWin32Status,
 		TimeTaken:     itimeTaken,
-		Customer:      customerName,
-		Filename:      filename,
 	}
 	return row
 }
@@ -133,7 +137,7 @@ func main() {
 					// be a line in the log file.  Don't send the comments to home base.
 					if (strings.Contains(line, "#")) == false {
 						data := strings.Fields(line)
-						row := loadLog(data, "CUSTOMER_NAME", fileName)
+						row := loadLog(data)
 
 						// Add the log record (row) to the logs slice
 						logs = append(logs, row)
@@ -146,8 +150,9 @@ func main() {
 				}
 
 				// Send data as tightly packed binary form via web service to cloud
-				//printJSON(logs[:1])
-				result := publishData("http://localhost:8080", logs)
+				// printJSON(logs[:1])
+				header := Header{CustomerName: "Tupoc", Filename: fileName, Logs: logs, Records: len(logs)}
+				result := publishData("http://localhost:8080", header)
 
 				if result == "200 OK" {
 					// Log the file loaded successfully
@@ -168,9 +173,9 @@ func main() {
 }
 
 // publishData v0.1 to pump data to raw endpoint w/ no security....
-func publishData(endpoint string, logs []Log) string {
+func publishData(endpoint string, h Header) string {
 	// gob encoding
-	var data = dataOutAsByte(logs)
+	var data = dataOutAsByte(h)
 
 	resp, err := http.Post(endpoint, "application/json", bytes.NewBuffer(data))
 	if err != nil {
@@ -221,8 +226,8 @@ func appendStringToFile(path, text string) error {
 	return nil
 }
 
-func dataOutAsByte(l []Log) []byte {
-	json, err := json.Marshal(l)
+func dataOutAsByte(h Header) []byte {
+	json, err := json.Marshal(h)
 	if err != nil {
 		fmt.Println(err)
 		return nil

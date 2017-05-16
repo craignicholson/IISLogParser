@@ -15,7 +15,15 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-// Log holds the default fields from an simple IIS Setup
+// Header contains the summary information about the logs
+type Header struct {
+	Logs         []Log  // The logs from IIS
+	CustomerName string // The unique customers name for grouping and viewing.
+	Filename     string // The file which contained the logs.
+	Records      int    // The number of rows in the log file we just parsed.
+}
+
+// Log contains the default fields from an simple IIS Setup
 type Log struct {
 	Date          time.Time // The date on which the activity occurred.
 	Time          string    // The time, in coordinated universal time (UTC), at which the activity occurred.
@@ -32,8 +40,6 @@ type Log struct {
 	ScSubstatus   int       // The substatus error code.
 	ScWin32Status int       // The Windows status code.
 	TimeTaken     int       // The length of time that the action took, in milliseconds.
-	Customer      string    // The unique customers name for grouping and viewing.
-	Filename      string    // The file which contained the logs.
 }
 
 // This only writes out to the web browser...
@@ -49,7 +55,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if len(data) < -1 {
 		fmt.Printf("%s", data)
 	}
-	var logs []Log
+	var logs Header
 	err = json.Unmarshal(data, &logs)
 	if err != nil {
 		panic(err)
@@ -72,7 +78,7 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
-func printJSON(l []Log) {
+func printJSON(l Header) {
 	json, err := json.Marshal(l)
 	if err != nil {
 		fmt.Println(err)
