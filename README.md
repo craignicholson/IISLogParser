@@ -2,7 +2,20 @@
 Exercise in go to parse IIS logs, send to central server, and display the results 
 in a web application.
 
-## Parser Name - DRD
+# Dependencies
+- Go -> Install go link https://golang.org/doc/install
+- gRPC -> http://www.grpc.io/docs/quickstart/go.html
+- 1.36Install Protocol Buffers v3 ->  MBprotoc-3.2.0-osx-x86_64.zip
+- BigQuery locally?
+    - https://cloud.google.com/bigquery/docs/reference/libraries#client-libraries-install-go
+    - go get -u cloud.google.com/go/bigquery
+- sample log files
+
+## Testing gRPC
+https://github.com/grpc/grpc-go/tree/master/examples
+
+
+## Parser Name - DRD (diagnostic repair drone - dang that does not work... need something that pukes data...)
 
 ### Steps
 - Runs once or more times a day

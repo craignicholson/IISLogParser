@@ -156,6 +156,8 @@ func main() {
 					fmt.Printf("Successful Load of %v : %v\n", fileName, result)
 					// Note the append could fail also, and if it does we would re-load the file
 					// again so we need a dedupe process on in moya.
+					// alert appendToFile failed, and alert should mention file name so we
+					// can clean out dupes.
 					appendStringToFile("History.dat", fileName)
 				}
 			}
